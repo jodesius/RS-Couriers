@@ -1,0 +1,52 @@
+{% load static %}
+<header class="site-header">
+    <div class="header-container">
+
+        <div class="header-left">
+            <button type="button" class="menu-toggle" id="menuToggle" aria-haspopup="true" aria-expanded="false" aria-controls="dropdownMenu">
+                <span class="menu-icon" aria-hidden="true">&#9776;</span>
+                <span class="menu-label">Menu</span>
+            </button>
+            <ul class="dropdown-menu" id="dropdownMenu">
+                <li><a href="{% url 'core:home' %}">Home</a></li>
+                <!-- Add each new page here as it is built -->
+                <li><a href="#">Services</a></li>
+                <li><a href="#">Get a Quote</a></li>
+                <li><a href="#">Track Parcel</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </div>
+
+        <div class="header-center">
+            <h1 class="site-title">
+                <a href="{% url 'core:home' %}">RS Couriers</a>
+            </h1>
+        </div>
+
+        <div class="header-right">
+            {% if user.is_authenticated %}
+                <div class="profile-menu">
+                    {# TODO: replace with the user's real profile picture once profile uploads exist #}
+                    <button type="button" class="profile-link" id="profileToggle" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown" aria-label="My account">
+                        {% include 'includes/_default_avatar.html' %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu--right" id="profileDropdown">
+                        <li class="dropdown-user-email">{{ user.email }}</li>
+                        <!-- Add account/dashboard links here once they exist -->
+                        <li>
+                            <form method="post" action="{% url 'accounts:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-logout-btn">Logout</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            {% else %}
+                <a href="{% url 'accounts:login' %}" class="profile-link" aria-label="Login or register">
+                    {% include 'includes/_default_avatar.html' %}
+                </a>
+            {% endif %}
+        </div>
+
+    </div>
+</header>

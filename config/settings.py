@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,7 +42,16 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+
+    # cloudinary_storage must be listed before staticfiles - see
+    # https://github.com/klis87/django-cloudinary-storage
+    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary',
+
+    # Local apps
+    'accounts',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -77,12 +87,37 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Reads DATABASE_URL (a Neon Postgres connection string) from .env. Falls
+# back to local SQLite when it's blank, so the project still runs before
+# Neon credentials are configured. (dj_database_url's own `default=` only
+# kicks in when the variable is fully absent, not when it's set-but-empty,
+# which is how a blank line in .env actually arrives here - so that check
+# has to happen explicitly.)
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600),
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+
+# Custom user model - email only, no username. See accounts/models.py.
+AUTH_USER_MODEL = 'accounts.User'
+
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'core:home'
+LOGOUT_REDIRECT_URL = 'core:home'
+
+# Sends password-reset emails to the console instead of a real inbox while
+# in development. Swap for a real SMTP backend (see EMAIL_HOST_* env vars)
+# once the site needs to send real emails.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'RS Couriers <no-reply@rscouriers.local>'
 
 
 # Password validation
@@ -120,6 +155,25 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files (user uploads) - stored on Cloudinary instead of the local
+# filesystem, so uploads survive redeploys on hosts with an ephemeral disk.
+MEDIA_URL = '/media/'
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+}
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
